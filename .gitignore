@@ -1,0 +1,17 @@
+# Dependencias (se instalan con npm install / npm ci)
+node_modules/
+npm-debug.log*
+
+# R
+.Rhistory
+.RData
+.Rproj.user/
+
+# Secretos locales
+.env
+.env.*
+!.env.example
+
+# Sistema
+.DS_Store
+Thumbs.db

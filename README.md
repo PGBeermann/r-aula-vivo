@@ -107,13 +107,20 @@ Los archivos `.R` y los informes `.html` se guardan y se leen desde la **computa
 
 ## 5. Configuración
 
-Variables de entorno (opcionales) al iniciar:
+Variables de entorno (opcionales en el aula; obligatorias las de clave en producción):
 
 | Variable | Por defecto | Descripción |
 |---|---|---|
 | `PORT` | `3000` | Puerto del servidor. |
-| `TEACHER_KEY` | `unachi-docente` | **Cámbiela** por una clave propia. |
+| `HOST` | `0.0.0.0` | Interfaz de escucha. |
+| `TEACHER_KEY` | `unachi-docente` | Clave del docente en texto plano. **Cámbiela.** |
+| `TEACHER_KEY_SHA256` | — | Hash SHA-256 (hex) de la clave del docente. Recomendado en servidores públicos; tiene prioridad sobre `TEACHER_KEY`. |
+| `CLASS_KEY` | — | Código que deben ingresar los estudiantes. Si no se define, entran solo con su nombre. |
+| `PUBLIC_URL` | — | URL que se muestra en la pantalla de acceso (p. ej. `https://raula.sudominio.com`). |
 | `R_TIMEOUT` | `20000` | Tiempo máximo por ejecución de R (ms). |
+| `MAX_CONCURRENT_R` | nº de núcleos (mín. 2) | Procesos `Rscript` simultáneos; el resto espera en cola. |
+| `MAX_QUEUE` | `60` | Ejecuciones en espera antes de responder "servidor ocupado". |
+| `NODE_ENV` | — | Con `production` el servidor exige definir la clave del docente y no la muestra en el registro. |
 
 Ejemplos:
 ```bash
@@ -126,22 +133,16 @@ $env:TEACHER_KEY="quimica2026"; $env:PORT=8080; node server.js
 
 ---
 
-## 6. Despliegue alternativo en el VPS de Hostinger
+## 6. Despliegue en el VPS de Hostinger con Docker / Dokploy
 
-Aunque está pensado para el aula, puede correr en su VPS para clases remotas:
+El repositorio incluye un `Dockerfile` de producción (R 4.6 de Rocker + Node.js 24, usuario sin privilegios, `tini`, *healthcheck* en `/healthz`). La guía completa paso a paso está en **[DEPLOY-DOKPLOY.md](DEPLOY-DOKPLOY.md)**.
+
+Prueba local de la imagen:
 ```bash
-# En el VPS
-sudo apt-get install -y r-base-core libcairo2 nodejs npm
-cd r-aula-vivo && npm install
-TEACHER_KEY="suClaveSegura" PORT=3000 node server.js
+docker build -t r-aula-viva .
+docker run --rm -p 3000:3000 -e TEACHER_KEY="quimica2026" -e CLASS_KEY="QM230" r-aula-viva
+# abrir http://localhost:3000
 ```
-Recomendado detrás de **Nginx** con HTTPS y un gestor de procesos (`pm2`):
-```bash
-sudo npm install -g pm2
-TEACHER_KEY="suClaveSegura" pm2 start server.js --name r-aula-viva
-pm2 save
-```
-Configure un *proxy inverso* en Nginx que reenvíe también las conexiones WebSocket (`Upgrade`/`Connection`) hacia `http://127.0.0.1:3000`.
 
 ---
 
@@ -160,7 +161,11 @@ Esta herramienta **ejecuta código R arbitrario en la máquina anfitriona**. Es 
 ```
 r-aula-vivo/
 ├── server.js              # Servidor HTTP + WebSocket + motor de R
-├── package.json
+├── package.json / package-lock.json
+├── Dockerfile             # Imagen de producción (Dokploy)
+├── .dockerignore
+├── .env.example           # Variables de entorno de referencia
+├── DEPLOY-DOKPLOY.md      # Guía de despliegue en Hostinger + Dokploy
 ├── README.md
 └── public/
     ├── index.html         # Interfaz

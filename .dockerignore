@@ -1,0 +1,29 @@
+# Se reinstalan dentro de la imagen con npm ci
+node_modules
+npm-debug.log*
+
+# Control de versiones y editores
+.git
+.gitignore
+.github
+.vscode
+.idea
+
+# Archivos locales de R / sistema
+.Rhistory
+.RData
+.Rproj.user
+*.Rproj
+.DS_Store
+Thumbs.db
+
+# Secretos y configuración local
+.env
+.env.*
+!.env.example
+
+# No necesarios en producción
+test
+Dockerfile
+.dockerignore
+*.md

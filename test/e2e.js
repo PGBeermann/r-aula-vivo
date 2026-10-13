@@ -36,7 +36,7 @@ async function until(ws, type, ms = 8000) {
   const w = await until(doc, 'welcome');
   ok(w && w.you.role === 'docente', 'Docente entra con clave correcta');
 
-  const est = await mk('estudiante', 'Ana Estudiante');
+  const est = await mk('estudiante', 'Ana Estudiante', process.env.CLASS_KEY);
   const we = await until(est, 'welcome');
   ok(we && we.you.role === 'estudiante', 'Estudiante entra sin clave');
   ok(typeof we.classCode === 'string', 'Estudiante recibe el código actual de la clase');

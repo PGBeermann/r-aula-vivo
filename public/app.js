@@ -148,9 +148,21 @@ ${plotsBlock}
   //  ACCESO
   // ============================================================
   // Mostrar URL del servidor
+  let classKeyRequired = false;   // el servidor exige código de clase a estudiantes
   fetch('/api/info').then((r) => r.json()).then((d) => {
-    const ip = (d.ips && d.ips[0]) || location.hostname;
-    $('#serverUrl').textContent = 'http://' + ip + ':' + d.port;
+    classKeyRequired = !!d.classKeyRequired;
+    const h = location.hostname;
+    const isLanOrLocal = h === 'localhost' || /^[\d.]+$/.test(h) || h.includes(':');
+    if (d.publicUrl) {
+      // Despliegue en servidor (Dokploy/Traefik): URL pública configurada
+      $('#serverUrl').textContent = d.publicUrl;
+    } else if (!isLanOrLocal) {
+      // Accedido por dominio (p. ej. detrás de proxy inverso con HTTPS)
+      $('#serverUrl').textContent = location.origin;
+    } else {
+      const ip = (d.ips && d.ips[0]) || h;
+      $('#serverUrl').textContent = 'http://' + ip + ':' + d.port;
+    }
   }).catch(() => {
     $('#serverUrl').textContent = location.origin;
   });
@@ -160,7 +172,13 @@ ${plotsBlock}
       selectedRole = card.dataset.role;
       $$('.role-card').forEach((c) => c.classList.toggle('is-active', c === card));
       $('#loginForm').hidden = false;
-      $('#keyField').hidden = selectedRole !== 'docente';
+      const needsKey = selectedRole === 'docente' || classKeyRequired;
+      $('#keyField').hidden = !needsKey;
+      $('#keyLabel').textContent = selectedRole === 'docente' ? 'Clave del docente' : 'Código de la clase';
+      $('#keyInput').placeholder = selectedRole === 'docente'
+        ? 'Clave entregada por el administrador'
+        : 'Código que indica el docente';
+      $('#keyInput').value = '';
       $('#loginError').hidden = true;
       $('#nameInput').focus();
     });
@@ -178,6 +196,9 @@ ${plotsBlock}
     if (!name) { showLoginError('Escribe tu nombre.'); return; }
     if (selectedRole === 'docente' && !$('#keyInput').value) {
       showLoginError('Ingresa la clave del docente.'); return;
+    }
+    if (selectedRole === 'estudiante' && classKeyRequired && !$('#keyInput').value) {
+      showLoginError('Ingresa el código de la clase.'); return;
     }
     pending = { role: selectedRole, name, key: $('#keyInput').value };
     $('#enterBtn').disabled = true;
