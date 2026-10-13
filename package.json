@@ -1,0 +1,18 @@
+{
+  "name": "r-aula-vivo",
+  "version": "1.0.0",
+  "description": "Aula colaborativa de R en tiempo real sobre red local Wi-Fi (UNACHI). El docente ejecuta y los estudiantes ven el resultado en vivo; los estudiantes envian scripts para revision.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": ["R", "Rscript", "aula", "tiempo-real", "websocket", "UNACHI", "educacion"],
+  "author": "UNACHI - Escuela de Quimica",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "^8.21.3"
+  }
+}
