@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>R Cursos · UNACHI</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b3d6b'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='20' font-weight='700' fill='white' text-anchor='middle'%3ER%3C/text%3E%3C/svg%3E" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b3d6b'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="vendor/codemirror/codemirror.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ====================== PANTALLA DE ACCESO ====================== -->
+<div id="login" class="login-wrap">
+  <div class="login-card">
+    <div class="brand">
+      <div class="brand-mark">R</div>
+      <div>
+        <h1>R&nbsp;Curso&nbsp;sincrónico</h1>
+        <p class="brand-sub">Aula colaborativa de R en tiempo real · UNACHI</p>
+      </div>
+    </div>
+
+    <div class="role-picker">
+      <button class="role-card" data-role="docente" type="button">
+        <span class="role-ico">🎓</span>
+        <span class="role-title">Soy docente</span>
+        <span class="role-desc">Escribo y ejecuto código; los estudiantes ven el resultado en vivo.</span>
+      </button>
+      <button class="role-card" data-role="estudiante" type="button">
+        <span class="role-ico">👩‍💻</span>
+        <span class="role-title">Soy estudiante</span>
+        <span class="role-desc">Sigo la clase en vivo, practico y envío mis scripts al docente.</span>
+      </button>
+    </div>
+
+    <form id="loginForm" class="login-form" hidden>
+      <label class="field">
+        <span>Nombre</span>
+        <input id="nameInput" type="text" maxlength="40" placeholder="Ej.: Dra. Pérez / Juan Estudiante" autocomplete="off" required />
+      </label>
+      <label class="field" id="keyField" hidden>
+        <span>Clave del docente</span>
+        <input id="keyInput" type="password" placeholder="Clave entregada por el administrador" autocomplete="off" />
+      </label>
+      <p id="loginError" class="login-error" hidden></p>
+      <div class="login-actions">
+        <button type="button" id="backBtn" class="btn btn-ghost">← Cambiar rol</button>
+        <button type="submit" id="enterBtn" class="btn btn-primary">Entrar al aula</button>
+      </div>
+    </form>
+
+    <p class="login-url">Dirección de este servidor: <strong id="serverUrl">—</strong></p>
+  </div>
+  <p class="foot">Universidad Autónoma de Chiriquí · Funciona sin internet, dentro de la red Wi-Fi del aula.</p>
+</div>
+
+<!-- ====================== APLICACIÓN ====================== -->
+<div id="app" hidden>
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-mark">R</span>
+      <span class="topbar-title">R Cursos</span>
+      <span id="roleBadge" class="badge"></span>
+    </div>
+    <nav id="studentTabs" class="tabs" hidden>
+      <button class="tab is-active" data-tab="clase" type="button">📺 Clase en vivo</button>
+      <button class="tab" data-tab="taller" type="button">✍️ Mi taller</button>
+      <button class="tab" data-tab="revisiones" type="button">✅ Revisiones <span id="revBadge" class="pill" hidden>0</span></button>
+    </nav>
+    <div class="topbar-right">
+      <span id="connState" class="conn conn-off" title="Estado de conexión">● conectando…</span>
+      <span id="userName" class="topbar-user"></span>
+      <button id="exitBtn" class="btn btn-ghost btn-sm" type="button">Salir</button>
+    </div>
+  </header>
+
+  <!-- ---------- VISTA DOCENTE ---------- -->
+  <main id="viewDocente" class="workspace" hidden>
+    <section class="pane">
+      <div class="pane-head">
+        <span class="pane-title">Editor del docente</span>
+        <div class="pane-tools">
+          <button id="openDocBtn" class="btn btn-ghost btn-sm" type="button" title="Abrir un archivo .R desde esta computadora">📂 Abrir</button>
+          <button id="saveDocBtn" class="btn btn-ghost btn-sm" type="button" title="Guardar el código como archivo .R">💾 Guardar</button>
+          <button id="clearEditorBtn" class="btn btn-ghost btn-sm" type="button" title="Borrar todo el código del editor">🧹 Limpiar código</button>
+          <label class="switch" title="Ejecuta automáticamente mientras escribe (1,2 s después de la última tecla)">
+            <input type="checkbox" id="autoRun" /> <span>Auto-ejecutar</span>
+          </label>
+          <span class="hint">Ctrl/Cmd + Enter</span>
+          <button id="runBtn" class="btn btn-run" type="button">▶ Ejecutar</button>
+        </div>
+      </div>
+      <div class="editor-host"><textarea id="ed-docente"></textarea></div>
+      <input id="fileDoc" type="file" accept=".R,.r,text/plain" hidden />
+    </section>
+
+    <section class="pane">
+      <div class="pane-head">
+        <span class="pane-title">Resultados <span id="runningTag" class="running" hidden>ejecutando…</span></span>
+        <div class="pane-tools">
+          <button id="exportDocBtn" class="btn btn-ghost btn-sm" type="button" title="Convertir la salida a un informe HTML (lo guarda y lo abre)">🌐 Exportar HTML</button>
+          <button id="clearBtn" class="btn btn-ghost btn-sm" type="button">Limpiar salida</button>
+        </div>
+      </div>
+      <div class="output" id="out-class">
+        <pre class="out-text"></pre>
+        <div class="plots"></div>
+      </div>
+    </section>
+
+    <aside class="rail">
+      <div class="rail-block">
+        <h3>Conectados <span id="rosterCount" class="pill">0</span></h3>
+        <ul id="rosterList" class="roster"></ul>
+      </div>
+      <div class="rail-block rail-grow">
+        <h3>Envíos de estudiantes <span id="subCount" class="pill">0</span></h3>
+        <ul id="subList" class="submissions"></ul>
+      </div>
+    </aside>
+  </main>
+
+  <!-- ---------- VISTA ESTUDIANTE ---------- -->
+  <main id="viewEstudiante" class="workspace workspace-2" hidden>
+    <!-- Tab: Clase en vivo -->
+    <div id="tab-clase" class="tabpane">
+      <section class="pane">
+        <div class="pane-head">
+          <span class="pane-title">Código del docente (en vivo)</span>
+          <div class="pane-tools">
+            <button id="saveClassBtn" class="btn btn-ghost btn-sm" type="button" title="Guardar el código de la clase como archivo .R">💾 Guardar</button>
+            <span class="hint">solo lectura</span>
+          </div>
+        </div>
+        <div class="editor-host"><textarea id="ed-clase"></textarea></div>
+      </section>
+      <section class="pane">
+        <div class="pane-head">
+          <span class="pane-title">Resultados de la clase <span id="runningTagC" class="running" hidden>ejecutando…</span></span>
+          <div class="pane-tools">
+            <button id="exportClassBtn" class="btn btn-ghost btn-sm" type="button" title="Convertir la salida a un informe HTML (lo guarda y lo abre)">🌐 Exportar HTML</button>
+            <button id="copyToTaller" class="btn btn-ghost btn-sm" type="button">Copiar a mi taller</button>
+          </div>
+        </div>
+        <div class="output" id="out-class-student">
+          <pre class="out-text"></pre>
+          <div class="plots"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Tab: Mi taller -->
+    <div id="tab-taller" class="tabpane" hidden>
+      <section class="pane">
+        <div class="pane-head">
+          <span class="pane-title">Mi editor</span>
+          <div class="pane-tools">
+            <button id="openMineBtn" class="btn btn-ghost btn-sm" type="button" title="Abrir un archivo .R desde esta computadora">📂 Abrir</button>
+            <button id="saveMineBtn" class="btn btn-ghost btn-sm" type="button" title="Guardar mi código como archivo .R">💾 Guardar</button>
+            <span class="hint">Ctrl/Cmd + Enter</span>
+            <button id="runMineBtn" class="btn btn-run" type="button">▶ Ejecutar</button>
+            <button id="submitBtn" class="btn btn-primary btn-sm" type="button">📤 Enviar al docente</button>
+          </div>
+        </div>
+        <div class="editor-host"><textarea id="ed-taller"></textarea></div>
+        <input id="fileMine" type="file" accept=".R,.r,text/plain" hidden />
+      </section>
+      <section class="pane">
+        <div class="pane-head">
+          <span class="pane-title">Mi resultado <span id="runningTagM" class="running" hidden>ejecutando…</span></span>
+          <div class="pane-tools">
+            <button id="exportMineBtn" class="btn btn-ghost btn-sm" type="button" title="Convertir mi salida a un informe HTML (lo guarda y lo abre)">🌐 Exportar HTML</button>
+          </div>
+        </div>
+        <div class="output" id="out-mine">
+          <pre class="out-text"></pre>
+          <div class="plots"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Tab: Revisiones -->
+    <div id="tab-revisiones" class="tabpane tabpane-single" hidden>
+      <section class="pane pane-full">
+        <div class="pane-head"><span class="pane-title">Revisiones del docente</span></div>
+        <div id="revList" class="rev-list">
+          <p class="empty">Aún no tienes revisiones. Envía un script desde “Mi taller”.</p>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- ====================== MODAL (revisión docente / envío estudiante) ====================== -->
+<div id="modal" class="modal" hidden>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 id="modalTitle">Título</h3>
+      <button id="modalClose" class="btn btn-ghost btn-sm" type="button">✕</button>
+    </div>
+    <div id="modalBody" class="modal-body"></div>
+  </div>
+</div>
+
+<!-- Notificaciones -->
+<div id="toasts" class="toasts"></div>
+
+<!-- CodeMirror (vendorizado, offline) -->
+<script src="vendor/codemirror/codemirror.js"></script>
+<script src="vendor/codemirror/r.js"></script>
+<script src="vendor/codemirror/matchbrackets.js"></script>
+<script src="vendor/codemirror/active-line.js"></script>
+<script src="vendor/codemirror/placeholder.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
